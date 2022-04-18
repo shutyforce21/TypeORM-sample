@@ -1,20 +1,60 @@
-import { AppDataSource } from "./data-source"
-import { User } from "./entity/User"
+import { read } from "fs";
+import { createConnection, getRepository, Repository } from "typeorm";
+import { User } from "./entity/User";
 
-AppDataSource.initialize().then(async () => {
+const createUser = async (userRepository: Repository<User>) => {
+    console.log('### insert user ###');
+    await userRepository.insert({
+        firstName: "taro",
+        lastName: "hakase",
+        age: 25
+    });
+    await userRepository.save({
+        firstName: "mako",
+        lastName: "hakase",
+        age: 40
+    });
+}
 
-    console.log("Inserting a new user into the database...")
-    const user = new User()
-    user.firstName = "Timber"
-    user.lastName = "Saw"
-    user.age = 25
-    await AppDataSource.manager.save(user)
-    console.log("Saved a new user with id: " + user.id)
+const readUsers = async (userRepository: Repository<User>) => {
+    console.log('### Read Users ###');
+    const users = await userRepository.find();
+    const usersJson = JSON.stringify(users)
+    console.log(`All User: ${usersJson}`);
+}
 
-    console.log("Loading users from the database...")
-    const users = await AppDataSource.manager.find(User)
-    console.log("Loaded users: ", users)
+const findUser = async (userRepository: Repository<User>) => {
+    console.log('### Get User ###');
+    const user = await userRepository.findOne({id: 1});
+    const userJson = JSON.stringify(user)
+    console.log(`User: ${userJson}`);
+}
 
-    console.log("Here you can setup and run express / fastify / any other framework.")
+const updateUser = async (userRepository: Repository<User>) => {
+    console.log('### Update user ###');
+    const user = await userRepository.findOne({id: 1});
+    user.firstName = 'updateTaro';
+    user.lastName = 'updateHakase';
+    user.age = 100;
+    await userRepository.save(user);
+}
 
-}).catch(error => console.log(error))
+const deleteUser = async (userRepository: Repository<User>) => {
+    console.log('### Delete user ###');
+    const user = await userRepository.findOne({id: 1});
+    await userRepository.remove(user);
+}
+
+(async () => {
+    console.log("Connecting db...")
+    const connection = await createConnection();
+    console.log("done")
+    const userRepository = getRepository(User);
+    await readUsers(userRepository);
+    await findUser(userRepository);
+    await updateUser(userRepository);
+    await findUser(userRepository);
+    await deleteUser(userRepository);
+    await readUsers(userRepository);
+    await connection.close()
+})()
